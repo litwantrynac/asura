@@ -1,0 +1,108 @@
+▄▀█ █▀ █░█ █▀█ ▄▀█
+█▀█ ▄█ █▄█ █▀▄ █▀█
+
+
+
+
+-- Load external libraries
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/vKhonshu/intro2/main/ui2"))()
+local NotifyLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/vKhonshu/intro/main/ui"))()
+NotifyLib.prompt('Asura Early Access', 'Welcome', 5)
+NotifyLib.prompt('Asura >>>>', 'lock was made by Tysukiyo >:)', 5)
+
+-- Load the main tool
+loadstring(game:HttpGet("https://raw.githubusercontent.com/litwantrynac/XXASURATOOLXX/main/asura%20tool"))()
+
+-- Set up global variables
+getgenv().Prediction = 0.12345
+getgenv().AimPart = "Head"
+getgenv().Key = "Q"
+getgenv().DisableKey = "P"
+
+-- Variables (Services)
+local Players = game:GetService("Players")
+local RS = game:GetService("RunService")
+local WS = game:GetService("Workspace")
+
+-- Variables (Regular)
+local LP = Players.LocalPlayer
+local Mouse = LP:GetMouse()
+local Camera = WS.CurrentCamera
+
+local AimlockState = true
+local Locked = false
+local Victim = nil
+
+local SelectedKey = getgenv().Key:lower()
+local SelectedDisableKey = getgenv().DisableKey:lower()
+
+-- Notification function
+local function Notify(tx)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Asura [EARLY ACCESS]",
+        Text = tx,
+        Duration = 5
+    })
+end
+
+-- Check if aimlock is loaded
+if getgenv().Loaded then
+    Notify("Aimlock is already loaded!")
+    return
+end
+
+getgenv().Loaded = true
+
+-- Functions
+local function getClosest()
+    local closestPlayer
+    local shortestDistance = math.huge
+
+    for _, player in pairs(Players:GetPlayers()) do
+        local character = player.Character
+        if player ~= LP and character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 and character:FindFirstChild(getgenv().AimPart) then
+            local pos = Camera:WorldToViewportPoint(character.PrimaryPart.Position)
+            local magnitude = (Vector2.new(pos.X, pos.Y) - Vector2.new(Mouse.X, Mouse.Y)).magnitude
+            
+            if magnitude < shortestDistance then
+                closestPlayer = player
+                shortestDistance = magnitude
+            end
+        end
+    end
+    return closestPlayer
+end
+
+-- Key handling
+Mouse.KeyDown:Connect(function(k)
+    k = k:lower()
+    if k == SelectedKey then
+        if AimlockState then
+            Locked = not Locked
+            if Locked then
+                Victim = getClosest()
+                if Victim and Victim.Character and Victim.Character:FindFirstChild("Humanoid") then
+                    Notify("Locked on to " .. tostring(Victim.Character.Humanoid.DisplayName))
+                else
+                    Notify("No valid target found!")
+                end
+            else
+                if Victim then
+                    Victim = nil
+                    Notify("Unlocked!")
+                end
+            end
+        else
+            Notify("Aimlock is not enabled!")
+        end
+    elseif k == SelectedDisableKey then
+        AimlockState = not AimlockState
+    end
+end)
+
+-- Loop update camera lock onto target
+RS.RenderStepped:Connect(function()
+    if AimlockState and Locked and Victim then
+        Camera.CFrame = CFrame.new(Camera.CFrame.p, Victim.Character[getgenv().AimPart].Position + Victim.Character[getgenv().AimPart].Velocity * getgenv().Prediction)
+    end
+end)
